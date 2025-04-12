@@ -4,6 +4,25 @@ const Appointment = require('../models/Appointment');
 const Dentist = require('../models/Dentist');
 
 /**
+ * @route   GET /appointments
+ * @desc    Fetch all booked appointments for all doctors
+ * @access  Public
+ */
+router.get('/', async (req, res) => {
+  try {
+    // Find all appointments and populate dentist information
+    const appointments = await Appointment.find()
+      .populate('dentist_id', 'name specialty');
+
+    // Return appointments
+    res.json(appointments);
+  } catch (err) {
+    console.error('Error fetching appointments:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
  * @route   POST /appointments
  * @desc    Book an appointment with a dentist on a selected date and time
  * @access  Public
@@ -52,7 +71,7 @@ router.post('/', async (req, res) => {
 
     // Create a Date object for the requested date
     const appointmentDate = new Date(date);
-    
+
     // Check if the date is valid
     if (isNaN(appointmentDate.getTime())) {
       return res.status(400).json({ message: 'Invalid date' });
