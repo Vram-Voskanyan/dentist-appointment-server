@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
 
     // Create a Date object for the requested date
     const requestedDate = new Date(date);
-    
+
     // Check if the date is valid
     if (isNaN(requestedDate.getTime())) {
       return res.status(400).json({ message: 'Invalid date' });
@@ -41,17 +41,26 @@ router.get('/', async (req, res) => {
     ];
 
     // Find booked appointments for the requested date
+    // Create start and end date objects to avoid modifying the original date
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
     let query = {
       date: {
-        $gte: new Date(requestedDate.setHours(0, 0, 0, 0)),
-        $lt: new Date(requestedDate.setHours(23, 59, 59, 999))
+        $gte: startDate,
+        $lt: endDate
       }
     };
 
     // If dentistId is provided, filter by dentist
     if (dentistId) {
       // Check if dentist exists
-      const dentist = await Dentist.findOne({ _id: dentistId.replace('dentist_', '') });
+      // Handle both cases: dentistId with or without "dentist_" prefix
+      const dentistIdWithoutPrefix = dentistId.startsWith('dentist_') ? dentistId.replace('dentist_', '') : dentistId;
+      const dentist = await Dentist.findOne({ _id: dentistIdWithoutPrefix });
       if (!dentist) {
         return res.status(404).json({ message: 'Dentist not found' });
       }
@@ -60,10 +69,10 @@ router.get('/', async (req, res) => {
 
     // Find booked appointments
     const bookedAppointments = await Appointment.find(query);
-    
+
     // Get booked time slots
     const bookedTimeSlots = bookedAppointments.map(appointment => appointment.time);
-    
+
     // Filter out booked time slots
     const availableSlots = allTimeSlots.filter(slot => !bookedTimeSlots.includes(slot));
 

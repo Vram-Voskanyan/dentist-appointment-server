@@ -64,7 +64,9 @@ router.post('/', async (req, res) => {
     }
 
     // Check if dentist exists
-    const dentist = await Dentist.findOne({ _id: dentistId.replace('dentist_', '') });
+    // Handle both cases: dentistId with or without "dentist_" prefix
+    const dentistIdWithoutPrefix = dentistId.startsWith('dentist_') ? dentistId.replace('dentist_', '') : dentistId;
+    const dentist = await Dentist.findOne({ _id: dentistIdWithoutPrefix });
     if (!dentist) {
       return res.status(404).json({ message: 'Dentist not found' });
     }
@@ -78,11 +80,18 @@ router.post('/', async (req, res) => {
     }
 
     // Check if the time slot is available
+    // Create start and end date objects to avoid modifying the original date
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999);
+
     const existingAppointment = await Appointment.findOne({
       dentist_id: dentist._id,
       date: {
-        $gte: new Date(appointmentDate.setHours(0, 0, 0, 0)),
-        $lt: new Date(appointmentDate.setHours(23, 59, 59, 999))
+        $gte: startDate,
+        $lt: endDate
       },
       time
     });
